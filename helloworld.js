@@ -1,27 +1,24 @@
-var net = require("net");
-var Canvas = require("canvas")
+var fs = require("fs")
+, net = require("net")
+, Canvas = require("canvas")
     , can = new Canvas(72, 32)
-    , ctx = can.getContext('2d');
+    , ctx = can.getContext('2d')
+, xmppClient = require("xmpp-client");
 
-var xmppClient = require("xmpp-client");
-
-var nnl = "\r\n";           // network new line
-
-
-var socket = new net.Socket();
-
+var nnl = "\r\n"            // network new line
+, config
+, client
+, socket = new net.Socket();
 socket.connected = false;
 
-socket.on("data",function (data){
-    //console.log(data.toString());
-});
-socket.on("error", function (data){
-    console.error(data);
-});
-socket.on("close", function (data){
-    console.log("connection closed");
-    socket.connected = false;
-});
+var readConf = function(callback){
+    fs.readFile('./config', 'utf-8', function (err, data){
+        if (err){
+            return callback(err);
+        }
+        callback(null, JSON.parse(data));
+    });
+}
 
 var toHex = function (n, l){
     n = n.toString(16);
@@ -101,13 +98,16 @@ var renderer = {
         switch (_){
             case (_ == true):{
                 context.clearRect(0, 0, canvas.width, canvas.height);
-                var y = width;
+                // text beginnt bei canvas.width
+                // und endet bei width*(-1)
+                //
+                var y = canvas.width;
                 var id = setInterval( function () {
                     context.clearRect(0, 0, canvas.width, canvas.height);
-                    context.fillText( message, width - y*2, 21);
-                    y--;
+                    context.fillText( message, y, 21);
+                    y --;
                     var imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
-                    var wallBuffer = new Buffer(canvas. width * canvas.height);
+                    var wallBuffer = new Buffer(canvas.width * canvas.height);
 
                     for (var i = 0; i < canvas.width * canvas.height; i++){
                         wallBuffer[i] = toHex(imageData[i*4 + 3], 1).charCodeAt(0);
@@ -115,10 +115,10 @@ var renderer = {
                     if (socket.connected === true){
                         socket.write("03" + wallBuffer.toString('ascii') + nnl);
                     }
-                    if (y == 0){
+                    if (y <= width*(-1)){
                          clearInterval(id);
                     }
-                 },100);
+                 },33);
                  break;
              }
              case (_ = false):{
@@ -130,36 +130,44 @@ var renderer = {
      }
 };
 
-
-var c = new xmppClient.Client({
-    jid: 'g3d2bot@hq.c3d2.de',
-    password: 'g3d2bot',
-}, function () {
-    console.log("client connected");
-    c.addListener('online',function (){
-        console.log("online");
-    });
-    c.addListener('message', function(stanza) {
-        console.log(stanza.getChild('body').getText().toString());
-        console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
-//        console.log(from;
-        console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
-//        console.log(msg);
-            console.log(stanza);
-    });
-    c.room("eri_is_learning@muc.hq.c3d2.de", function (status){
-        console.log(status);
-        this.addListener('message', function(from, msg, stanza) {
-            console.log("--------------------------------------------------");
+var connect = function (client){
+    client = new xmppClient.Client({
+        jid: config.jid,
+        password: config.password,
+    }, function () {
+        console.log("client connected");
+        client.addListener('online',function (){
+            console.log("online");
+        });
+        client.addListener('message', function(from, msg, stanza) {
+            console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
             console.log(from);
-            console.log("--------------------------------------------------");
+            console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
             console.log(msg);
-            ctx.clearRect(0,0,can.width,can.height);
-            var width = ctx.measureText(msg).width;
-            renderer.pushMsg(can, msg);
+    //        var m;
+    //        if ((m = /\/*/.match(from))){
+                renderer.pushMsg(can, from +" "+ msg);
+    //            }
+    //        console.log(msg);
+    //            console.log(stanza);
+        });
+        client.room(config.room, function (status){
+            console.log(status);
+            this.addListener('message', function(from, msg, stanza) {
+                console.log("--------------------------------------------------");
+                console.log(from);
+                console.log("--------------------------------------------------");
+                console.log(msg);
+                ctx.clearRect(0,0,can.width,can.height);
+                var width = ctx.measureText(msg).width;
+    //           var m;
+    //            if ((m = from.match(/\/*/))) {
+                    renderer.pushMsg(can, from +" "+ msg);
+    //                }
+            });
         });
     });
-});
+}
 
 
 
@@ -170,10 +178,28 @@ ctx.fillStyle = '#ffffff';
 
 //console.log(can.width);
 
-socket.connect(1339, "localhost", function (){
-    socket.connected = true;
-    console.log("connected");
-    socket.write("00" + nnl);
-    renderer.render(can);
+readConf( function (err, data){
+    if (err){
+        return console.log(err);
+    }
+    config = data;
+    console.log(config.jid);
+    connect(client);
+    socket.connect( config.wallport, config.wallserver, function (){
+        socket.connected = true;
+        console.log("connected");
+        socket.write("00" + nnl);
+        renderer.render(can);
+    });
 });
 
+socket.on("data",function (data){
+    //console.log(data.toString());
+});
+socket.on("error", function (data){
+    console.error(data);
+});
+socket.on("close", function (data){
+    console.log("connection closed");
+    socket.connected = false;
+});
