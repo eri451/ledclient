@@ -1,4 +1,7 @@
+// TODO: aufräumen
 var fs = require("fs")
+, util = require("util")
+, events = require("events")
 , net = require("net")
 , Canvas = require("canvas")
     , can = new Canvas(72, 32)
@@ -8,8 +11,54 @@ var fs = require("fs")
 var nnl = "\r\n"            // network new line
 , config
 , client
+, queue = []
 , socket = new net.Socket();
 socket.connected = false;
+
+var Renderer = function () {};
+util.inherits(Renderer, events.EventEmitter);
+var renderer = new Renderer();
+
+Renderer.prototype.busy = false;
+
+Renderer.prototype.queue =  function (from, msg, stanza){
+        var sender
+            , message;
+        sender  = (from.split("/")[1] === undefined)? "channel" :
+            from.split("/")[1];
+        message = sender +": "+ msg;
+        queue.push(message);
+        if (!this.busy){
+            this.emit('go');
+        }
+}
+
+Renderer.prototype.drawMsg = function (canvas, message){
+    context = canvas.getContext('2d');
+    var width = ctx.measureText(message).width;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    var y = canvas.width;
+    var self = this;
+    var id = setInterval( function () {
+//                log(from, msg, stanza, 'room');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillText( message, y, 21);
+        y --;
+        var imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        var wallBuffer = new Buffer(canvas.width * canvas.height);
+
+        for (var i = 0; i < canvas.width * canvas.height; i++){
+            wallBuffer[i] = toHex(imageData[i*4 + 3], 1).charCodeAt(0);
+        }
+        if (socket.connected === true){
+            socket.write("03" + wallBuffer.toString('ascii') + nnl);
+        }
+        if (y <= width*(-1)){
+             clearInterval(id);
+             self.emit('done');
+        }
+     },42);
+}
 
 var readConf = function(callback){
     fs.readFile('./config', 'utf-8', function (err, data){
@@ -35,7 +84,6 @@ var setPixel = function (x, y, b){
 
     if (socket.connected){
         socket.write("02"+ x + y + b + nnl);
-//        console.log("02"+ x + y + b + nnl);
     }
 }
 
@@ -44,7 +92,6 @@ var setAll = function (b){
 
     if (socket.connected){
         socket.write("02ffff"+ b + nnl);
-//        console.log("02ffff"+ b + nnl);
     }
 }
 
@@ -71,112 +118,62 @@ var blink = function (times, hi_brightnes, lo_brightness, delay, callback){
     }, delay );
 }
 
-var renderer = {
 
-    render:  function (canvas){
-        context = canvas.getContext('2d');
-        setInterval( function (){
-            var imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    //        console.log(imageData);
-            var wallBuffer = new Buffer(canvas.width * canvas.height);
-            for (var i = 0; i < canvas.width * canvas.height; i++){
-    //            console.log(toHex(imageData[i*4 +1]/16,1).charCodeAt(0));
-                wallBuffer[i] = toHex(imageData[i*4 + 3], 1).charCodeAt(0);
-            }
-            if (socket.connected === true){
-                socket.write("03" + wallBuffer.toString('ascii') + nnl);
-    //            console.log("03" + wallBuffer.toString('ascii') + nnl );
-    //            console.log(wallBuffer);
-            }
-        },
-        1000);  // frames per second
+var log = function (from, msg, stanza, listener ){
+    switch (listener){
+        case 'client':
+            console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
+            console.log(from);
+            console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
+            console.log(msg);
+            break;
+       case 'room':
+            console.log("--------------------------------------------------");
+            console.log(from);
+            console.log("--------------------------------------------------");
+            console.log(msg);
+            break;
+       default:
+            console.log("mist");
     }
-    , pushMsg: function (canvas, message){
-        context = canvas.getContext('2d');
-        var width = ctx.measureText(message).width;
-        var _ = width > canvas.width;
-        switch (_){
-            case (_ == true):{
-                context.clearRect(0, 0, canvas.width, canvas.height);
-                // text beginnt bei canvas.width
-                // und endet bei width*(-1)
-                //
-                var y = canvas.width;
-                var id = setInterval( function () {
-                    context.clearRect(0, 0, canvas.width, canvas.height);
-                    context.fillText( message, y, 21);
-                    y --;
-                    var imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
-                    var wallBuffer = new Buffer(canvas.width * canvas.height);
-
-                    for (var i = 0; i < canvas.width * canvas.height; i++){
-                        wallBuffer[i] = toHex(imageData[i*4 + 3], 1).charCodeAt(0);
-                    }
-                    if (socket.connected === true){
-                        socket.write("03" + wallBuffer.toString('ascii') + nnl);
-                    }
-                    if (y <= width*(-1)){
-                         clearInterval(id);
-                    }
-                 },33);
-                 break;
-             }
-             case (_ = false):{
-                 context.clearRect(0, 0, canvas.width, canvas.heigh);
-                 context.fillText( message, (width - canvas.width)/2, 21);
-                 break;
-             }
-         }
-     }
-};
+}
 
 var connect = function (client){
     client = new xmppClient.Client({
         jid: config.jid,
         password: config.password,
     }, function () {
-        console.log("client connected");
+        console.log("Client connected");
         client.addListener('online',function (){
             console.log("online");
         });
         client.addListener('message', function(from, msg, stanza) {
-            console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
-            console.log(from);
-            console.log("++++++++++++++++++++++++++++++++++++++++++++++++++");
-            console.log(msg);
-    //        var m;
-    //        if ((m = /\/*/.match(from))){
-                renderer.pushMsg(can, from +" "+ msg);
-    //            }
-    //        console.log(msg);
-    //            console.log(stanza);
+            log(from, msg, stanza, 'client');
+            renderer.queue(from, msg, stanza);
         });
         client.room(config.room, function (status){
             console.log(status);
             this.addListener('message', function(from, msg, stanza) {
-                console.log("--------------------------------------------------");
-                console.log(from);
-                console.log("--------------------------------------------------");
-                console.log(msg);
-                ctx.clearRect(0,0,can.width,can.height);
-                var width = ctx.measureText(msg).width;
-    //           var m;
-    //            if ((m = from.match(/\/*/))) {
-                    renderer.pushMsg(can, from +" "+ msg);
-    //                }
+                renderer.queue(from, msg, stanza);
             });
         });
     });
 }
 
-
-
+renderer.on('done', function (){
+    if (queue.length != 0){
+        renderer.drawMsg(can, queue.shift());
+    }else{
+        renderer.busy = false;
+    }
+});
+renderer.on('go', function (){
+    console.log(queue);
+    renderer.busy = true;
+    renderer.drawMsg(can, queue.shift());
+});
 ctx.font = '12px Impact';
 ctx.fillStyle = '#ffffff';
-//var imageData = ctx.getImageData(0, 0, context.width, context.height).data;
-//console.log('<img src="' + can.toDataURL() + '" />');
-
-//console.log(can.width);
 
 readConf( function (err, data){
     if (err){
@@ -187,19 +184,16 @@ readConf( function (err, data){
     connect(client);
     socket.connect( config.wallport, config.wallserver, function (){
         socket.connected = true;
-        console.log("connected");
+        console.log("Wall connected");
         socket.write("00" + nnl);
-        renderer.render(can);
     });
-});
-
-socket.on("data",function (data){
-    //console.log(data.toString());
-});
-socket.on("error", function (data){
-    console.error(data);
-});
-socket.on("close", function (data){
-    console.log("connection closed");
-    socket.connected = false;
+    socket.on("data",function (data){
+    });
+    socket.on("error", function (data){
+        console.error(data);
+    });
+    socket.on("close", function (data){
+        console.log("connection closed");
+        socket.connected = false;
+    });
 });
