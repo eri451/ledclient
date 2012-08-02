@@ -15,6 +15,8 @@ var nnl = "\r\n"            // network new line
 , socket = new net.Socket();
 socket.connected = false;
 
+ctx.fillStyle = '#ffffff';
+
 var Renderer = function () {};
 util.inherits(Renderer, events.EventEmitter);
 var renderer = new Renderer();
@@ -26,7 +28,9 @@ Renderer.prototype.queue =  function (from, msg, stanza){
             , message;
         sender  = (from.split("/")[1] === undefined)? "channel" :
             from.split("/")[1];
-        message = sender +": "+ msg;
+        time = new Date().toTimeString().split(" G")[0];
+
+        message = [time +" "+sender +": ", msg];
         queue.push(message);
         if (!this.busy){
             this.emit('go');
@@ -35,15 +39,18 @@ Renderer.prototype.queue =  function (from, msg, stanza){
 
 Renderer.prototype.drawMsg = function (canvas, message){
     context = canvas.getContext('2d');
-    var width = ctx.measureText(message).width;
+    var width = ctx.measureText(message[1]).width;
     context.clearRect(0, 0, canvas.width, canvas.height);
-    var y = canvas.width;
+    var x = canvas.width;
     var self = this;
     var id = setInterval( function () {
-//                log(from, msg, stanza, 'room');
+
         context.clearRect(0, 0, canvas.width, canvas.height);
-        context.fillText( message, y, 21);
-        y --;
+        context.font = '8px Impact';
+        context.fillText( message[0], 0, 8);
+        context.font = '12px Impact';
+        context.fillText( message[1], x, 24);
+        x --;
         var imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
         var wallBuffer = new Buffer(canvas.width * canvas.height);
 
@@ -53,7 +60,7 @@ Renderer.prototype.drawMsg = function (canvas, message){
         if (socket.connected === true){
             socket.write("03" + wallBuffer.toString('ascii') + nnl);
         }
-        if (y <= width*(-1)){
+        if (x <= width*(-1) - 1){
              clearInterval(id);
              self.emit('done');
         }
@@ -148,7 +155,6 @@ var connect = function (client){
             console.log("online");
         });
         client.addListener('message', function(from, msg, stanza) {
-            log(from, msg, stanza, 'client');
             renderer.queue(from, msg, stanza);
         });
         client.room(config.room, function (status){
@@ -164,16 +170,13 @@ renderer.on('done', function (){
     if (queue.length != 0){
         renderer.drawMsg(can, queue.shift());
     }else{
-        renderer.busy = false;
+        renderer.drawMsg(can, [" "," "]);
     }
 });
 renderer.on('go', function (){
-    console.log(queue);
     renderer.busy = true;
     renderer.drawMsg(can, queue.shift());
 });
-ctx.font = '12px Impact';
-ctx.fillStyle = '#ffffff';
 
 readConf( function (err, data){
     if (err){
@@ -193,7 +196,7 @@ readConf( function (err, data){
         console.error(data);
     });
     socket.on("close", function (data){
-        console.log("connection closed");
+        console.log("wall connection closed");
         socket.connected = false;
     });
 });
