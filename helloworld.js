@@ -13,8 +13,8 @@ var nnl = "\r\n"            // network new line
 , client
 , queue = []
 , socket = new net.Socket();
-socket.connected = false;
 
+socket.connected = false;
 ctx.fillStyle = '#ffffff';
 
 var Renderer = function () {};

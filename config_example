@@ -1,0 +1,7 @@
+{
+ "jid": "botJID"
+,"password": "botPassword"
+,"room": "room@server"
+,"wallserver": "server"
+,"wallport": 1339
+}
