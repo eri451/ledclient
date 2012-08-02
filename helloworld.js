@@ -28,9 +28,12 @@ Renderer.prototype.queue =  function (from, msg, stanza){
             , message;
         sender  = (from.split("/")[1] === undefined)? "channel" :
             from.split("/")[1];
-        time = new Date().toTimeString().split(" G")[0];
+        sender = sender.trim();
+        time = new Date().toTimeString().split(":");
+        time = time[0] +":"+ time[1];
+        time = time.trim();
 
-        message = [time +" "+sender +": ", msg];
+        message = [time ,sender +":", msg];
         queue.push(message);
         if (!this.busy){
             this.emit('go');
@@ -39,18 +42,26 @@ Renderer.prototype.queue =  function (from, msg, stanza){
 
 Renderer.prototype.drawMsg = function (canvas, message){
     context = canvas.getContext('2d');
-    var width = ctx.measureText(message[1]).width;
+    var timeWidth = context.measureText(message[0]).width;
+    var sndWidth = context.measureText(message[1]).width;
+    var msgWidth = context.measureText(message[2]).width;
     context.clearRect(0, 0, canvas.width, canvas.height);
-    var x = canvas.width;
+    var msgx = canvas.width;
+    var  sndx = 0;
+    var count = 1;
+
     var self = this;
     var id = setInterval( function () {
 
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.font = '8px Impact';
         context.fillText( message[0], 0, 8);
+        context.font = '8px Impact';
+        context.fillText( message[1], 25, 8);
         context.font = '12px Impact';
-        context.fillText( message[1], x, 24);
-        x --;
+        context.fillText( message[2], msgx, 24);
+        sndx += count;
+        msgx --;
         var imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
         var wallBuffer = new Buffer(canvas.width * canvas.height);
 
@@ -60,7 +71,13 @@ Renderer.prototype.drawMsg = function (canvas, message){
         if (socket.connected === true){
             socket.write("03" + wallBuffer.toString('ascii') + nnl);
         }
-        if (x <= width*(-1) - 1){
+        if (sndx <= 0){
+            count = -count;
+        }
+        if (sndx > canvas.width - sndWidth){
+            count = -count;
+        }
+        if (msgx <= -msgWidth - 1){
              clearInterval(id);
              self.emit('done');
         }
@@ -170,7 +187,7 @@ renderer.on('done', function (){
     if (queue.length != 0){
         renderer.drawMsg(can, queue.shift());
     }else{
-        renderer.drawMsg(can, [" "," "]);
+        renderer.drawMsg(can, [" "," "," "]);
     }
 });
 renderer.on('go', function (){
