@@ -32,6 +32,7 @@ Renderer.prototype.queue =  function (from, msg, stanza){
         time = new Date().toTimeString().split(":");
         time = time[0] +":"+ time[1];
         time = time.trim();
+        msg = msg.trim();
 
         message = [time ,sender +":", msg];
         queue.push(message);
@@ -47,20 +48,21 @@ Renderer.prototype.drawMsg = function (canvas, message){
     var msgWidth = context.measureText(message[2]).width;
     context.clearRect(0, 0, canvas.width, canvas.height);
     var msgx = canvas.width;
-    var  sndx = 0;
-    var count = 1;
+//    var  sndx = 0;
+//    var count = 1;
 
     var self = this;
     var id = setInterval( function () {
 
         context.clearRect(0, 0, canvas.width, canvas.height);
+
         context.font = '8px Impact';
         context.fillText( message[0], 0, 8);
-        context.font = '8px Impact';
         context.fillText( message[1], 25, 8);
+
         context.font = '12px Impact';
         context.fillText( message[2], msgx, 24);
-        sndx += count;
+//        sndx += count;
         msgx --;
         var imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
         var wallBuffer = new Buffer(canvas.width * canvas.height);
@@ -71,12 +73,12 @@ Renderer.prototype.drawMsg = function (canvas, message){
         if (socket.connected === true){
             socket.write("03" + wallBuffer.toString('ascii') + nnl);
         }
-        if (sndx <= 0){
-            count = -count;
-        }
-        if (sndx > canvas.width - sndWidth){
-            count = -count;
-        }
+//        if (sndx <= 0){
+//            count = -count;
+//        }
+//        if (sndx > canvas.width - sndWidth){
+//            count = -count;
+//        }
         if (msgx <= -msgWidth - 1){
              clearInterval(id);
              self.emit('done');
@@ -204,8 +206,8 @@ readConf( function (err, data){
     connect(client);
     socket.connect( config.wallport, config.wallserver, function (){
         socket.connected = true;
-        console.log("Wall connected");
         socket.write("00" + nnl);
+        console.log("Wall connected");
     });
     socket.on("data",function (data){
     });
