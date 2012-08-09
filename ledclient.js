@@ -11,10 +11,12 @@ var fs = require("fs")
 
 var logger = new (winston.Logger)({
     transports: [
-      new (winston.transports.Console)({ level: 'info' }),
+      new (winston.transports.Console)({ level: 'warn' }),
       new (winston.transports.File)({ filename: 'ledclient.log' })
     ]
 });
+
+logger.info("blie bla blub");
 
 var nnl = "\r\n"            // network new line
 , config
@@ -44,7 +46,7 @@ Renderer.prototype.queue =  function (from, msg, stanza){
 
         message = [time ,sender +":", msg];
         queue.push(message);
-        console.log(queue);
+        logger.info(queue);
         if (!this.busy){
             this.emit('go');
         }
@@ -178,18 +180,23 @@ var connect = function (client){
         jid: config.jid,
         password: config.password,
     }, function () {
-        console.log("Client connected");
+        logger.info("Client connected");
+        logger.info(config.jid);
+        logger.info(config.password);
+        logger.info(config.muc);
         client.addListener('online',function (){
             console.log("online");
         });
-        client.addListener('message', function(from, msg, stanza) {
+        // due to xmpp-client no pm possible
+/*        client.addListener('message', function(from, msg, stanza) {
+            logger.info("" + from +  msg + " to im");
             renderer.queue(from, msg, stanza);
-        });
+        });*/
         client.room(config.muc, function (status){
             console.log(status);
             this.addListener('message', function(from, msg, stanza) {
                 renderer.queue(from, msg, stanza);
-                log(from, msg, stanza, "room");
+                logger.info("" + from +  msg +" to room");
             });
         });
     });
@@ -221,7 +228,7 @@ readConf( function (err, data){
         setPriority(3);
     });
     socket.on("data",function (data){
-        console.log(data);
+       logger.info(data);
     });
     socket.on("error", function (data){
         console.error(data);
