@@ -3,10 +3,18 @@ var fs = require("fs")
 , util = require("util")
 , events = require("events")
 , net = require("net")
+, winston = require("winston")
 , Canvas = require("canvas")
     , can = new Canvas(72, 32)
     , ctx = can.getContext('2d')
 , xmppClient = require("xmpp-client");
+
+var logger = new (winston.Logger)({
+    transports: [
+      new (winston.transports.Console)({ level: 'info' }),
+      new (winston.transports.File)({ filename: 'ledclient.log' })
+    ]
+});
 
 var nnl = "\r\n"            // network new line
 , config
