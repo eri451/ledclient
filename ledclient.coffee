@@ -5,7 +5,42 @@ events = require "events"
 net = require "net"
 Canvas = require "canvas"
 xmppClient = require "xmpp-client"
+winston = require "winston"
 
+myLevels =
+    levels: 
+      debug: 0,
+      info: 1,
+      warn: 2,
+      error: 3,
+    ,
+    colors: 
+      debug: 'blue',
+      info: 'green',
+      warn: 'yellow',
+      error: 'red'
+
+logger = new (winston.Logger) (
+    levels: myLevels.levels
+    transports: [
+        new (winston.transports.Console)( 
+            level: 'debug',
+            colorize: 'true'
+        )
+        new (winston.transports.File)(
+            filename: 'ledclient_coffee.log',
+            colorize: 'true'
+        )
+    ]
+)
+
+winston.addColors myLevels.colors
+
+
+logger.debug "debug output"
+logger.info "info output"
+logger.warn "warn output"
+logger.error "error output"
 # make setInterval less painful
 makeInterval = (ms, callback) ->
     setInterval callback, ms
