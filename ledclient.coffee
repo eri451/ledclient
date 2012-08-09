@@ -9,12 +9,14 @@ winston = require "winston"
 
 myLevels =
     levels: 
-      debug: 0,
-      info: 1,
-      warn: 2,
-      error: 3,
+      protocol: 0,
+      debug: 1,
+      info: 2,
+      warn: 3,
+      error: 4,
     ,
     colors: 
+      protocol: 'grey',
       debug: 'blue',
       info: 'green',
       warn: 'yellow',
@@ -24,7 +26,7 @@ logger = new (winston.Logger) (
     levels: myLevels.levels
     transports: [
         new (winston.transports.Console)( 
-            level: 'debug',
+            level: 'protocol',
             colorize: 'true'
         )
         new (winston.transports.File)(
@@ -37,6 +39,7 @@ logger = new (winston.Logger) (
 winston.addColors myLevels.colors
 
 
+logger.protocol "protocol output"
 logger.debug "debug output"
 logger.info "info output"
 logger.warn "warn output"
@@ -85,6 +88,7 @@ class Renderer extends events.EventEmitter
         @emit 'go' if not @busy
 
     drawMsg: (canvas, message) ->
+        logger.debug message
         context = canvas.getContext '2d'
         [time_w, sender_w, msg_w] = for entry in message
             context.measureText(entry).width
@@ -108,6 +112,7 @@ class Renderer extends events.EventEmitter
             for i in wallBuffer
                 wallBuffer[i] = toHex(imageData[i*4 + 3],1).charCodeAt 0
 
+            logger.protocol "led wall connection is #{socket.connected}"
             if socket.connected is true
                 socket.write "03 #{wallBuffer.toString('ascii')} + nnl"
 
@@ -138,19 +143,6 @@ setPriority = (lvl) ->
     lvl = toHex lvl, 2
     socket.write "04" + lvl + nnl if socket.connected
 
-log = (from, msg, stanza, listener) ->
-    switch listener
-        when 'client'
-            console.log """+++++++++++++++++++++++++++++++++++++
-                           #{from}
-                           +++++++++++++++++++++++++++++++++++++
-                           #{msg} """
-        when 'room'
-            console.log """-------------------------------------
-                           #{from}
-                           -------------------------------------
-                           #{msg} """
-
 connect_client = ({jid, password, muc}) ->
     client = new xmppClient.Client {jid, password}, ->
             console.log "client connected"
@@ -170,7 +162,8 @@ readConf (err, {jid, password, muc, wallserver, wallport}) ->
     logger.info jid
     connect_client {jid, password, muc}
     socket.connect wallport, wallserver, ->
-        socket.connect = true
+        socket.connected = true
+        setPriority 3 
         socket.write "00" + nnl
         console.log "wall connected"
 
@@ -180,17 +173,19 @@ readConf (err, {jid, password, muc, wallserver, wallport}) ->
 
     renderer.on 'done', ->
         @busy = true
-        logger.debug(queue)
-        if queue.length not 0
+#        logger.debug(queue)
+        logger.debug(queue.shift())
+        if queue.length is not 0
              @drawMsg can, queue.shift()
         else
              @drawMsg can, [" "," "," "]
 
     socket.on 'data', (data) ->
+        logger.debug data
 
     socket.on 'error', (data) ->
-        console.log data
+        logger.error data
 
     socket.on 'close', (data) ->
-        console.log "wall connected close"
+        logger.info "wall connected close"
         socket.connected = false
