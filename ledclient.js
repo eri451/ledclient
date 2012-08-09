@@ -44,6 +44,7 @@ Renderer.prototype.queue =  function (from, msg, stanza){
 
         message = [time ,sender +":", msg];
         queue.push(message);
+        console.log(queue);
         if (!this.busy){
             this.emit('go');
         }
@@ -184,10 +185,11 @@ var connect = function (client){
         client.addListener('message', function(from, msg, stanza) {
             renderer.queue(from, msg, stanza);
         });
-        client.room(config.room, function (status){
+        client.room(config.muc, function (status){
             console.log(status);
             this.addListener('message', function(from, msg, stanza) {
                 renderer.queue(from, msg, stanza);
+                log(from, msg, stanza, "room");
             });
         });
     });
@@ -201,8 +203,8 @@ renderer.on('done', function (){
     }
 });
 renderer.on('go', function (){
-    renderer.busy = true;
     renderer.drawMsg(can, queue.shift());
+    renderer.busy = true;
 });
 
 readConf( function (err, data){
@@ -216,8 +218,10 @@ readConf( function (err, data){
         socket.connected = true;
         socket.write("00" + nnl);
         console.log("Wall connected");
+        setPriority(3);
     });
     socket.on("data",function (data){
+        console.log(data);
     });
     socket.on("error", function (data){
         console.error(data);
