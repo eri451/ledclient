@@ -68,10 +68,13 @@ class Renderer extends events.EventEmitter
 #                @drawMsg can, [" "," "," "]
 
     queue: (from, msg, stanza) ->
-        sender  = from.split("/")[1].trim()
+        logger.info "Starting Renderer::queue"
+        logger.debug from
+        sender = from.split("/")[1]
         sender ?= "channel"
+        sender = sender.trim()
         sender += ":"
-
+        logger.debug sender
         time = new Date().toTimeString().split ":"
         time = "#{time[0]}:#{time[1]}".trim()
 
@@ -87,7 +90,7 @@ class Renderer extends events.EventEmitter
             context.measureText(entry).width
         msg_x = canvas.width
 
-        @interval_id = makeInterval 42, ->
+        @interval_id = makeInterval 42, =>
             context.clearRect 0, 0, canvas.width, canvas.height
 
             context.font = '8px Impact'
@@ -95,7 +98,7 @@ class Renderer extends events.EventEmitter
             context.fillText message[1], 25, 8
 
             context.font = '12px Impact'
-            context.fillText message[2], msgx, 24
+            context.fillText message[2], msg_x, 24
 
             --msg_x
 
@@ -162,8 +165,9 @@ connect_client = ({jid, password, muc}) ->
                     renderer.queue from, msg, stanza
 
 readConf (err, {jid, password, muc, wallserver, wallport}) ->
-    return console.log err if err?
-    console.log jid
+    logger.info "Starting readConf"
+    return logger.error err if err?
+    logger.info jid
     connect_client {jid, password, muc}
     socket.connect wallport, wallserver, ->
         socket.connect = true
@@ -176,6 +180,7 @@ readConf (err, {jid, password, muc, wallserver, wallport}) ->
 
     renderer.on 'done', ->
         @busy = true
+        logger.debug(queue)
         if queue.length not 0
              @drawMsg can, queue.shift()
         else
