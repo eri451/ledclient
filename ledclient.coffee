@@ -88,7 +88,7 @@ class Renderer extends events.EventEmitter
         @emit 'go' if not @busy
 
     drawMsg: (canvas, message) ->
-        logger.debug message
+        logger.debug "Starting drawMsg"
         context = canvas.getContext '2d'
         [time_w, sender_w, msg_w] = for entry in message
             context.measureText(entry).width
@@ -108,13 +108,17 @@ class Renderer extends events.EventEmitter
 
             imageData = context.getImageData(0, 0, canvas.width, canvas.height).data
             wallBuffer = new Buffer canvas.width * canvas.height
+            
+            for i in [0..wallBuffer.length-1]
+                wallBuffer[i] = toHex(imageData[i*4+3],1).charCodeAt 0
 
-            for i in wallBuffer
-                wallBuffer[i] = toHex(imageData[i*4 + 3],1).charCodeAt 0
-
+            
             logger.protocol "led wall connection is #{socket.connected}"
             if socket.connected is true
-                socket.write "03 #{wallBuffer.toString('ascii')} + nnl"
+#                socket.write "02FFFFFF#{nnl}"
+            #    logger.protocol wallBuffer.toString('ascii')
+                logger.protocol "03#{wallBuffer.toString('ascii')}#{nnl}"
+                socket.write "03#{wallBuffer.toString('ascii')}#{nnl}"
 
             if msg_x <= -msg_w - 1
                 clearInterval @interval_id
@@ -140,19 +144,23 @@ setAll = (b) ->
     socket.write "02ffff" + b + nnl if socket.connected
 
 setPriority = (lvl) ->
+    logger.info "Starting setPriority"
+    logger.debug lvl
     lvl = toHex lvl, 2
     socket.write "04" + lvl + nnl if socket.connected
 
 connect_client = ({jid, password, muc}) ->
+    logger.info "Starting connect_client"
+    logger.debug "Jid: #{jid}"
+    logger.debug "Password: #{password}"
+    logger.debug "Muc: #{muc}"
     client = new xmppClient.Client {jid, password}, ->
-            console.log "client connected"
             client.addListener 'online', ->
-                console.log "online"
+                logger.info "client connected => online"
             client.addListener 'message', (from, msg, stanza) ->
-                    renderer.queue from, msg, stanza
-
+                renderer.queue from, msg, stanza
             client.room muc, (status) ->
-                console.log status
+                logger.info "got Message from muc"
                 @addListener 'message', (from, msg, stanza) ->
                     renderer.queue from, msg, stanza
 
@@ -161,11 +169,13 @@ readConf (err, {jid, password, muc, wallserver, wallport}) ->
     return logger.error err if err?
     logger.info jid
     connect_client {jid, password, muc}
+    logger.debug "Wallport " + wallport
+    logger.debug "Wallserver " + wallserver
     socket.connect wallport, wallserver, ->
         socket.connected = true
         setPriority 3 
         socket.write "00" + nnl
-        console.log "wall connected"
+        logger.info "Wall connected"
 
     renderer.on 'go', ->
         @busy = true
@@ -173,7 +183,6 @@ readConf (err, {jid, password, muc, wallserver, wallport}) ->
 
     renderer.on 'done', ->
         @busy = true
-#        logger.debug(queue)
         logger.debug(queue.shift())
         if queue.length is not 0
              @drawMsg can, queue.shift()
