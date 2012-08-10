@@ -192,3 +192,5 @@ fs.readFile './config', 'utf-8', (err, data) ->
         logger.debug "Renderer reacting on signal done"
         unless @msg_list.length is 0
             @drawMsg()
+        else
+            socket.write "02FFFF00#{nnl}"
