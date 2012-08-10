@@ -26,7 +26,7 @@ logger = new (winston.Logger) (
     levels: myLevels.levels
     transports: [
         new (winston.transports.Console)( 
-            level: 'protocol',
+            level: 'debug',
             colorize: 'true'
         )
         new (winston.transports.File)(
@@ -115,13 +115,12 @@ class Renderer extends events.EventEmitter
             
             logger.protocol "led wall connection is #{socket.connected}"
             if socket.connected is true
-#                socket.write "02FFFFFF#{nnl}"
-            #    logger.protocol wallBuffer.toString('ascii')
                 logger.protocol "03#{wallBuffer.toString('ascii')}#{nnl}"
                 socket.write "03#{wallBuffer.toString('ascii')}#{nnl}"
 
             if msg_x <= -msg_w - 1
                 clearInterval @interval_id
+                logger.info "Message drawing done"
                 @emit 'done'
 
 renderer = new Renderer
