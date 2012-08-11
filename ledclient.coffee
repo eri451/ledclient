@@ -6,6 +6,8 @@ net = require "net"
 Canvas = require "canvas"
 xmppClient = require "xmpp-client"
 winston = require "winston"
+mirrors = require('./mirrors.js')
+
 
 myLevels =
     levels: 
@@ -38,7 +40,6 @@ logger = new (winston.Logger) (
 
 winston.addColors myLevels.colors
 
-
 logger.protocol "protocol output"
 logger.debug "debug output"
 logger.info "info output"
@@ -54,6 +55,7 @@ nnl = "\r\n"
 
 socket = new net.Socket
 socket.connected = false
+
 
 class Renderer extends events.EventEmitter
     constructor: ->
@@ -93,6 +95,7 @@ class Renderer extends events.EventEmitter
     draw: ([time, sender, msg]) ->
         @busy = true
 
+        msg_mirrored = mirrors.mirror msg
         #The context of the canvas
         context = @canvas.getContext '2d'
         context.fillStyle = '#ffffff'
@@ -111,8 +114,9 @@ class Renderer extends events.EventEmitter
             context.fillText time, 0, 8
             context.fillText sender, 25, 8
 
-            context.font = '12px Impact'
-            context.fillText msg, msg_x_mirrored, 24
+            context.font = '11px Impact'
+            context.fillText msg_mirrored, msg_x_mirrored, 20
+            context.fillText msg, msg_x, 31
 
             --msg_x
             ++msg_x_mirrored
