@@ -103,6 +103,7 @@ class Renderer extends events.EventEmitter
 
         #Position of first char of message
         msg_x = @canvas.width
+        msg_x_mirrored = -msg_width 
 
         @interval_id = makeInterval 42, =>
             context.clearRect 0, 0, @canvas.width, @canvas.height
@@ -111,9 +112,10 @@ class Renderer extends events.EventEmitter
             context.fillText sender, 25, 8
 
             context.font = '12px Impact'
-            context.fillText msg, msg_x, 24
+            context.fillText msg, msg_x_mirrored, 24
 
             --msg_x
+            ++msg_x_mirrored
 
             imageData = context.getImageData(0, 0, @canvas.width, @canvas.height).data
             
