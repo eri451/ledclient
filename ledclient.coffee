@@ -140,6 +140,7 @@ toHex = (n, l) ->
         n = "0"+n
     return n
 
+
 fs.readFile './config', 'utf-8', (err, data) ->
     logger.info "Reading configuration File"
     return logger.error err if err?
@@ -156,8 +157,8 @@ fs.readFile './config', 'utf-8', (err, data) ->
             client.addListener 'online', ->
                 logger.info "Online"
             #Communicating directly with the client does not work at the moment
-            client.addListener 'message', (from, msg, stanza) ->
-                renderer.queue from, msg, stanza
+            #client.addListener 'message', (from, msg, stanza) ->
+            #    renderer.queue from, msg, stanza
             #Communication inside the muc
             client.room config.muc, (status) ->
                 logger.debug "entered muc with status #{status}"
@@ -165,15 +166,17 @@ fs.readFile './config', 'utf-8', (err, data) ->
                 @addListener 'message', (from, msg, stanza) ->
                     renderer.queue from, msg, stanza
     logger.info "Connecting with wall server" 
-    logger.debug "Wallport " + config.wallport
-    logger.debug "Wallserver " + config.wallserver
-    socket.connect config.wallport,config.wallserver, ->
-        socket.connected = true
-        lvl = '03'
-        socket.write "04#{lvl}#{nnl}"
-        socket.write "00#{nnl}"
-        logger.info "wallserver connected"
+    connectWallserver = (host, port) ->
+        logger.debug "Wallport " + port
+        logger.debug "Wallserver " + host
+        socket.connect port,host, ->
+            socket.connected = true
+            lvl = '03'
+            socket.write "04#{lvl}#{nnl}"
+            socket.write "00#{nnl}"
+            logger.info "wallserver connected"
 
+    connectWallserver config.wallserver, config.wallport
     socket.on 'data', (data) ->
         return logger.error data if data == 'bad'
         logger.protocol data
@@ -182,6 +185,8 @@ fs.readFile './config', 'utf-8', (err, data) ->
     socket.on 'close', (data) ->
         logger.info "wallserver closing connection"
         socket.connected = false
+        logger.info "Retrying to connect"
+        connectWallserver config.wallserver, config.wallport
 
     renderer.on 'new_message', ->
         logger.debug "Renderer reacting on signal new_message"
