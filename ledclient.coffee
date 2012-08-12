@@ -6,7 +6,6 @@ net = require "net"
 Canvas = require "canvas"
 xmppClient = require "xmpp-client"
 winston = require "winston"
-mirrors = require('./mirrors.js')
 
 
 myLevels =
@@ -95,7 +94,6 @@ class Renderer extends events.EventEmitter
     draw: ([time, sender, msg]) ->
         @busy = true
 
-        msg_mirrored = mirrors.mirror msg
         #The context of the canvas
         context = @canvas.getContext '2d'
         context.fillStyle = '#ffffff'
@@ -106,7 +104,6 @@ class Renderer extends events.EventEmitter
 
         #Position of first char of message
         msg_x = @canvas.width
-        msg_x_mirrored = -msg_width 
 
         @interval_id = makeInterval 42, =>
             context.clearRect 0, 0, @canvas.width, @canvas.height
@@ -115,11 +112,16 @@ class Renderer extends events.EventEmitter
             context.fillText sender, 25, 8
 
             context.font = '11px Impact'
-            context.fillText msg_mirrored, msg_x_mirrored, 20
+            
+            context.save()
+            context.scale -1,1
+            context.translate -@canvas.width, 0
+            context.fillText msg, msg_x, 20
+            context.restore()
+
             context.fillText msg, msg_x, 31
 
             --msg_x
-            ++msg_x_mirrored
 
             imageData = context.getImageData(0, 0, @canvas.width, @canvas.height).data
             
