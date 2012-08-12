@@ -107,19 +107,20 @@ class Renderer extends events.EventEmitter
 
         @interval_id = makeInterval 42, =>
             context.clearRect 0, 0, @canvas.width, @canvas.height
-            context.font = '8px Impact'
-            context.fillText time, 0, 8
-            context.fillText sender, 25, 8
 
-            context.font = '11px Impact'
-            
             context.save()
+            context.font = '11px Impact'
             context.scale -1,1
             context.translate -@canvas.width, 0
-            context.fillText msg, msg_x, 20
+            context.fillText msg, msg_x, 11
             context.restore()
 
-            context.fillText msg, msg_x, 31
+            context.font = '8px Impact'
+            context.fillText time, 0, 20
+            context.fillText sender, 25, 20
+
+            context.font = '11px Impact'
+            context.fillText msg, msg_x, 32
 
             --msg_x
 
