@@ -116,8 +116,8 @@ class Renderer extends events.EventEmitter
             context.restore()
 
             context.font = '8px Impact'
-            context.fillText time, 0, 20
-            context.fillText sender, 25, 20
+            context.fillText time, 0, 18
+            context.fillText sender, 25, 18
 
             context.font = '11px Impact'
             context.fillText msg, msg_x, 30
