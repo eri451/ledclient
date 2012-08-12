@@ -112,7 +112,7 @@ class Renderer extends events.EventEmitter
             context.font = '11px Impact'
             context.scale -1,1
             context.translate -@canvas.width, 0
-            context.fillText msg, msg_x, 11
+            context.fillText msg, msg_x, 9
             context.restore()
 
             context.font = '8px Impact'
@@ -120,7 +120,7 @@ class Renderer extends events.EventEmitter
             context.fillText sender, 25, 20
 
             context.font = '11px Impact'
-            context.fillText msg, msg_x, 32
+            context.fillText msg, msg_x, 30
 
             --msg_x
 
