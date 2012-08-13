@@ -9,14 +9,14 @@ winston = require "winston"
 
 
 myLevels =
-    levels: 
+    levels:
       protocol: 0,
       debug: 1,
       info: 2,
       warn: 3,
       error: 4,
     ,
-    colors: 
+    colors:
       protocol: 'grey',
       debug: 'blue',
       info: 'green',
@@ -26,7 +26,7 @@ myLevels =
 logger = new (winston.Logger) (
     levels: myLevels.levels
     transports: [
-        new (winston.transports.Console)( 
+        new (winston.transports.Console)(
             level: 'debug',
             colorize: 'true'
         )
@@ -98,7 +98,7 @@ class Renderer extends events.EventEmitter
         context = @canvas.getContext '2d'
         context.fillStyle = '#ffffff'
 
-          
+
         logger.debug "Starting Renderer::draw"
         msg_width = context.measureText(msg).width
 
@@ -125,7 +125,7 @@ class Renderer extends events.EventEmitter
             --msg_x
 
             imageData = context.getImageData(0, 0, @canvas.width, @canvas.height).data
-            
+
             for i in [0..@wallBuffer.length-1]
                 @wallBuffer[i] = toHex(imageData[i*4+3],1).charCodeAt 0
 
@@ -137,7 +137,7 @@ class Renderer extends events.EventEmitter
 
             if msg_x <= -msg_width - 1
                 clearInterval @interval_id
-                @busy = false 
+                @busy = false
                 logger.debug "Message drawing done"
                 @emit 'done'
 
@@ -174,7 +174,7 @@ fs.readFile './config', 'utf-8', (err, data) ->
 ##TO BE TESTED
                 @addListener 'message', (from, msg, stanza) ->
                     renderer.queue from, msg, stanza
-    logger.info "Connecting with wall server" 
+    logger.info "Connecting with wall server"
     connectWallserver = (host, port) ->
         logger.debug "Wallport " + port
         logger.debug "Wallserver " + host
@@ -200,7 +200,7 @@ fs.readFile './config', 'utf-8', (err, data) ->
     renderer.on 'new_message', ->
         logger.debug "Renderer reacting on signal new_message"
         if not @busy
-            @drawMsg() 
+            @drawMsg()
 
     renderer.on 'done', ->
         logger.debug "Renderer reacting on signal done"
