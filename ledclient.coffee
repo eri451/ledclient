@@ -74,6 +74,7 @@ class Renderer extends events.EventEmitter
         logger.info "Starting Renderer::queue"
         logger.debug from
         logger.debug msg
+
         sender = from.split("/")[1]
         sender ?= "channel"
         sender = sender.trim()
@@ -81,9 +82,7 @@ class Renderer extends events.EventEmitter
         time = new Date().toTimeString().split ":"
         time = "#{time[0]}:#{time[1]}".trim()
 
-        message = [time, sender, msg.trim()]
-
-        @msg_list.push message
+        @msg_list.push [time, sender, msg.trim()]
 
         @emit 'new_message'
 
@@ -149,6 +148,15 @@ toHex = (n, l) ->
         n = "0"+n
     return n
 
+connectWallserver = (host, port) ->
+    logger.debug "Wallport " + port
+    logger.debug "Wallserver " + host
+    socket.connect port,host, ->
+        socket.connected = true
+        lvl = '03'
+        socket.write "04#{lvl}#{nnl}"
+        logger.info "wallserver connected"
+
 
 fs.readFile './config', 'utf-8', (err, data) ->
     logger.info "Reading configuration File"
@@ -174,18 +182,10 @@ fs.readFile './config', 'utf-8', (err, data) ->
 ##TO BE TESTED
                 @addListener 'message', (from, msg, stanza) ->
                     renderer.queue from, msg, stanza
-    logger.info "Connecting with wall server"
-    connectWallserver = (host, port) ->
-        logger.debug "Wallport " + port
-        logger.debug "Wallserver " + host
-        socket.connect port,host, ->
-            socket.connected = true
-            lvl = '03'
-            socket.write "04#{lvl}#{nnl}"
-            socket.write "00#{nnl}"
-            logger.info "wallserver connected"
 
+    logger.info "Connecting with wall server"
     connectWallserver config.wallserver, config.wallport
+
     socket.on 'data', (data) ->
         return logger.error data if data == 'bad'
         logger.protocol data
